@@ -29,6 +29,36 @@ def get_fiscal_year_end():
         print("Invalid input. Defaulting to December (12).")
         return 12
 
+def calculate_revenue_growth(df):
+    """Extracts revenue data, calculates growth, and computes CAGR."""
+    possible_revenue_columns = ["Revenue", "Total Revenue", "Sales", "Net Sales"]
+    revenue_column = None
+    
+    for col in df.columns:
+        if any(keyword.lower() in str(col).lower() for keyword in possible_revenue_columns):
+            revenue_column = col
+            break
+    
+    if revenue_column:
+        df_revenue = df[[df.columns[0], revenue_column]].dropna()
+        df_revenue.columns = ['Period', 'Revenue']
+        df_revenue['Revenue Growth'] = df_revenue['Revenue'].pct_change() * 100
+        
+        initial_revenue = df_revenue['Revenue'].iloc[0]
+        final_revenue = df_revenue['Revenue'].iloc[-1]
+        num_periods = len(df_revenue) - 1
+        
+        avg_growth = df_revenue['Revenue Growth'].mean()
+        cagr = ((final_revenue / initial_revenue) ** (1 / num_periods) - 1) * 100 if num_periods > 0 else 0
+        
+        print("\nRevenue Data with Growth Rates:")
+        print(df_revenue)
+        
+        print(f"\nAverage Revenue Growth: {avg_growth:.2f}%")
+        print(f"Compound Annual Growth Rate (CAGR): {cagr:.2f}%")
+    else:
+        print("Revenue data is missing from the dataset.")
+
 def analyze_financial_data(statements):
     """Analyzes the financial statements to determine frequency and historical periods."""
     fiscal_year_end = get_fiscal_year_end()
@@ -46,6 +76,9 @@ def analyze_financial_data(statements):
                 "Full Years": full_years,
                 "Fiscal Year End": fiscal_year_end
             }
+            
+            if statement == "Income Statement":
+                calculate_revenue_growth(df)
     
     return periods
 
@@ -81,29 +114,3 @@ if __name__ == "__main__":
         print(f"\n{statement} Analysis:")
         for key, value in details.items():
             print(f"{key}: {value}")
-
-def calculate_revenue_growth(df):
-    """Prints all revenues with their respective period, calculates growth, and computes the average growth rate and CAGR."""
-    if 'Revenue' in df.columns and 'Date' in df.columns:
-        df['Date'] = pd.to_datetime(df['Date'])
-        df = df.sort_values(by='Date')
-        df['Revenue Growth'] = df['Revenue'].pct_change() * 100
-        
-        initial_revenue = df['Revenue'].iloc[0]
-        final_revenue = df['Revenue'].iloc[-1]
-        num_periods = len(df) - 1
-        
-        avg_growth = df['Revenue Growth'].mean()
-        cagr = ((final_revenue / initial_revenue) ** (1 / num_periods) - 1) * 100 if num_periods > 0 else 0
-        
-        print("\nRevenue Data with Growth Rates:")
-        print(df[['Date', 'Revenue', 'Revenue Growth']])
-        
-        print(f"\nAverage Revenue Growth: {avg_growth:.2f}%")
-        print(f"Compound Annual Growth Rate (CAGR): {cagr:.2f}%")
-    else:
-        print("Revenue data is missing from the dataset.")
-
-# Adding function call to analyze revenue if Income Statement is available
-if "Income Statement" in financial_data:
-    calculate_revenue_growth(financial_data["Income Statement"])
